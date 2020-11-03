@@ -57,13 +57,11 @@ class ShotAdmin(admin.ModelAdmin):
 
     def change_class_to_emergency_service(modeladmin, request, queryset):
         queryset.update(type=3, wrong_label=True)
-    change_class_to_police.change_class_to_emergency_service \
-            = 'Изменить класс на "Аварийная"'
+    change_class_to_police.short_description = 'Изменить класс на "Аварийная"'
 
     def change_class_to_fire(modeladmin, request, queryset):
         queryset.update(type=4, wrong_label=True)
-    change_class_to_police.change_class_to_emergency_service \
-            = 'Изменить класс на "Пожарная"'
+    change_class_to_police.short_description = 'Изменить класс на "Пожарная"'
 
     """
     Methods for displaying images

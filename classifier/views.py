@@ -8,6 +8,8 @@ from django.core.files.base import ContentFile
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 
+import tensorflow as tf
+from tensorflow import keras
 import numpy as np
 import threading
 import cv2
@@ -166,10 +168,16 @@ def is_car_unique(img):
 
     return True
 
+def test_similar(request, pk):
+    shot = Shot.objects.get(pk=pk)
+    img = Image.open(shot.car)
+    return HttpResponse(is_car_unique(img))
+
 class Logger:
     def __call__(self, error_message):
         print(error_message)
 
+logger = Logger()
 class RTSPReader:
     def __init__(self, link, frequency_seconds, reload_on_errors=True, reload_after_n_frames=None):
         self.link = link
@@ -178,13 +186,11 @@ class RTSPReader:
         self.reload_after_n_frames = reload_after_n_frames
         self.counter = 0
         self.cap = None
-        logger('init')
 
     def __iter__(self):
         self.connect_to_camera()
-        self.fps = int(cap.get(cv2.CAP_PROP_FPS))
-        self.frequency_framer = self.fps * self.frequency_seconds
-        logger('iter')
+        self.fps = int(self.cap.get(cv2.CAP_PROP_FPS))
+        self.frequency_frames = self.fps * self.frequency_seconds
         return self
 
     def __next__(self):
@@ -194,8 +200,7 @@ class RTSPReader:
             if self.counter % self.reload_after_n_frames == 0:
                 self.connect_to_camera()
 
-        if self.counter % self.frequency_framer == 0:
-            logger('next')
+        if self.counter % self.frequency_frames == 0:
             rate, frame = self.cap.read()
             if not rate:
                 if self.reload_on_errors:
@@ -215,14 +220,37 @@ class RTSPReader:
         if not self.cap.isOpened():
             logger('[Error] Unable to connect to {}'.format(self.link))
 
+def define_model():
+    base_model = tf.keras.applications.MobileNetV2(weights=None, include_top=False)
+    x = base_model.output
+    x = tf.keras.layers.GlobalAveragePooling2D()(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Dense(1024, activation='elu', kernel_initializer='he_normal')(x)
+    x = tf.keras.layers.Dropout(rate=0.25)(x)
+    x = tf.keras.layers.Dense(1024, activation='elu', kernel_initializer='he_normal')(x)
+    x = tf.keras.layers.Dropout(rate=0.25)(x)
+    x = tf.keras.layers.Dense(512, activation='elu', kernel_initializer='he_normal')(x)
+    output = tf.keras.layers.Dense(2, activation='softmax')(x)
+    model = tf.keras.models.Model(inputs=[base_model.input,], outputs=[output,])
+    return model
+
 def load_model(file):
     if file.endswith('.pickle'):
         with open(file, 'rb') as file:
             model = pickle.load(file)
 
         return model, 'sklearn'
+    elif file.endswith('weights.h5'):
+        print(tf.__version__)
+        print(keras.__version__)
+        print('test loading model')
+        model = define_model()
+        print(model)
+        model.load_weights(file)
+        return model, 'tf'
     elif file.endswith('.h5'):
-        model = keras.models.load_model(file)
+        print(os.listdir())
+        model = tf.keras.models.load_model(file)
         return model, 'tf'
     else:
         logger('[Error] Unsuported model type')
@@ -251,11 +279,11 @@ def predict(model, image, type_):
 
 def read_camera(camera):
 
-    model, type_ = load_model('model.h5')
+    model, type_ = load_model('model_weights.h5')
     detector = \
         VehicleDetector({
             "labels": ["car", "truck", "bus"],
-            "min_confidence": 0.5,
+            "min_confidence": 0.25,
             "threshold": 0.3,
             "min_sizes": {
                 "width": camera.min_width,
@@ -267,11 +295,13 @@ def read_camera(camera):
     mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
     thread = threading.currentThread()
 
-    for frame in RTSPReader(url, 1, reload_after_n_frames=50):
+    for frame in RTSPReader(camera.ip_adress, 1, reload_after_n_frames=50):
         if frame is not None:
             if not getattr(thread, "do_run", True):
                 return
+            logger('[Read] {}'.format(camera.pk))
 
+            orig = frame.copy()
             image = cv2.bitwise_and(frame, frame, mask=mask)
             boxes = detector.predict(image)
             for box, _ in boxes:
@@ -279,6 +309,7 @@ def read_camera(camera):
                 roi = orig[y: y+h, x: x+w]
 
                 if is_car_unique(roi):
+                    logger('Found car {}'.format(camera.pk))
                     label = predict(model, roi, type_)
 
                     if label != 1:
@@ -313,6 +344,7 @@ def start_all(request):
             t = threading.Thread(target=read_camera, args=(camera,))
             threads[camera.pk] = t
             t.start()
+            time.sleep(5)
             camera.active = True
             camera.save()
 
