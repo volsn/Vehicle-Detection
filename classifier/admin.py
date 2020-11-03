@@ -1,3 +1,5 @@
+import os
+
 from django.contrib import admin
 from django.utils.html import format_html
 from classifier.models import Camera, Shot
@@ -32,11 +34,11 @@ class ShotAdmin(admin.ModelAdmin):
     readonly_fields = ('display_car_image',)
     list_display = ('timestamp', 'size', 'display_car_image_list',)
     actions = ('change_class_to_civil', 'change_class_to_ambulance', \
-            'change_class_to_police', 'change_class_to_emergency_service', \
-            'change_class_to_fire')
-
+                'change_class_to_police', 'change_class_to_emergency_service', \
+                'change_class_to_fire')
+   
     def size(self, obj):
-        if not obj.car:
+        if not obj.car or not os.path.exists(obj.car.path):
             return 'NaN'
         return '{}x{}'.format(obj.car.width, obj.car.height)
 
@@ -57,11 +59,11 @@ class ShotAdmin(admin.ModelAdmin):
 
     def change_class_to_emergency_service(modeladmin, request, queryset):
         queryset.update(type=3, wrong_label=True)
-    change_class_to_police.short_description = 'Изменить класс на "Аварийная"'
+    change_class_to_emergency_service.short_description = 'Изменить класс на "Аварийная"'
 
     def change_class_to_fire(modeladmin, request, queryset):
         queryset.update(type=4, wrong_label=True)
-    change_class_to_police.short_description = 'Изменить класс на "Пожарная"'
+    change_class_to_fire.short_description = 'Изменить класс на "Пожарная"'
 
     """
     Methods for displaying images
@@ -76,7 +78,11 @@ class ShotAdmin(admin.ModelAdmin):
 
     def display_car_image_list(self, obj):
 
-        if not obj.car:
+        #if not obj.car:
+        #   return 'NaN'
+    
+        print(obj.car.path)
+        if not os.path.exists(obj.car.path):
             return 'NaN'
 
         # Resizing
