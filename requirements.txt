@@ -7,4 +7,5 @@ imagehash
 Pillow
 scikit-learn
 django-cleanup
+tensorflow
 
