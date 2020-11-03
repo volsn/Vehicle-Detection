@@ -4,4 +4,5 @@ yolo-coco/yolov3.weights
 test/
 media/
 db.sqlite3
+static/
 
