@@ -6,4 +6,5 @@ media/
 db.sqlite3
 static/
 Interface/settings.py
+temp/
 
