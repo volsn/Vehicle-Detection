@@ -279,7 +279,7 @@ def predict(model, image, type_):
 
 def read_camera(camera):
 
-    model, type_ = load_model('model_weights.h5')
+    model, type_ = load_model('model.pickle')
     detector = \
         VehicleDetector({
             "labels": ["car", "truck", "bus"],

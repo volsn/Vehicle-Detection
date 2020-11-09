@@ -35,8 +35,9 @@ class ShotAdmin(admin.ModelAdmin):
     list_display = ('timestamp', 'size', 'display_car_image_list',)
     actions = ('change_class_to_civil', 'change_class_to_ambulance', \
                 'change_class_to_police', 'change_class_to_emergency_service', \
-                'change_class_to_fire')
-   
+                'change_class_to_fire', 'change_class_to_tractor', \
+                'change_to_garbage_truck')
+
     def size(self, obj):
         if not obj.car or not os.path.exists(obj.car.path):
             return 'NaN'
@@ -65,6 +66,14 @@ class ShotAdmin(admin.ModelAdmin):
         queryset.update(type=4, wrong_label=True)
     change_class_to_fire.short_description = 'Изменить класс на "Пожарная"'
 
+    def change_class_to_tractor(modeladmin, request, queryset):
+        queryset.update(type=5, wrong_label=True)
+    change_class_to_tractor.short_description = 'Изменить класс на "Трактор"'
+
+    def change_class_to_garbage_truck(modeladmin, request, queryset):
+        queryset.update(type=6, wrong_label=True)
+    change_class_to_garbage_truck.short_description = 'Изменить класс на "Мусоровоз"'
+
     """
     Methods for displaying images
     """
@@ -80,7 +89,7 @@ class ShotAdmin(admin.ModelAdmin):
 
         #if not obj.car:
         #   return 'NaN'
-    
+
         print(obj.car.path)
         if not os.path.exists(obj.car.path):
             return 'NaN'

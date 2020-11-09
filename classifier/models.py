@@ -51,7 +51,9 @@ class Shot(models.Model):
         (1, 'Гражданское'),
         (2, 'Полицейская'),
         (3, 'Аварийная'),
-        (4, 'Пожарная')
+        (4, 'Пожарная'),
+        (5, 'Трактор'),
+        (6, 'Мусоровоз'),
     )
 
     camera = models.ForeignKey(Camera, on_delete=models.CASCADE, \
