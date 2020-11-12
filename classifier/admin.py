@@ -30,7 +30,7 @@ class CameraAdmin(admin.ModelAdmin):
 
 @admin.register(Shot)
 class ShotAdmin(admin.ModelAdmin):
-    list_filter = ('type',)
+    list_filter = ('type', 'camera')
     readonly_fields = ('display_car_image',)
     list_display = ('timestamp', 'size', 'display_car_image_list',)
     actions = ('change_class_to_civil', 'change_class_to_ambulance', \
